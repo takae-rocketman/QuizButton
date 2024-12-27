@@ -22,33 +22,36 @@
   https://www.arduino.cc/en/Tutorial/BuiltInExamples/Button
 */
 
+
+#include <QList.h>
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
- 
+
 #define SCREEN_ADDRESS 0x3C
 
 // constants won't change. They're used here to set pin numbers:
 const int SCREEN_WIDTH = 128;
 const int SCREEN_HEIGHT = 64;
 const int OLED_RESET = -1;
-const int OLED_TEXT_SIXE = 9;
+const int OLED_TEXT_SIZE = 9;
 const int NUM_OF_ANSWERERS = 5; // 回答者数
 const int RESET_BUTTON_PIN = 5; // リセットボタンは5番ピン
 const int CORRECT_BUTTON_PIN = RESET_BUTTON_PIN + 1; // 正解ボタンはリセットボタンの隣
 const int WRONG_BUTTON_PIN = CORRECT_BUTTON_PIN + 1; // // 不正解ボタンは正解ボタンの隣
 const int BUTTON_ON = HIGH; // ボタンを押した時に電圧がHIGHになる
 const int BUTTON_OFF = LOW; // ボタンを離した時に電圧がLOWになる
-const int ANSWER_ACCEPTING_MODE = 0; // 回答ボタン操作受付中
-const int DISPLAY_MODE = 1;   // 回答者の番号を表示中
+const int EVENT_INTERVAL = 500; // イベントの間隔（ミリ秒）
 int ANSWERER_BUTTON_PINS[NUM_OF_ANSWERERS]; // 回答ボタンのピン番号を格納する配列
 int EFFECT_BUTTON_PINS[3] = {RESET_BUTTON_PIN, CORRECT_BUTTON_PIN, WRONG_BUTTON_PIN};  // 効果ボタンのピン番号を格納する配列
+QList<int> answererQueue;
 
 // variables will change:
-int mode;
 int buttonState;  // variable for reading the pushbutton status
-bool buttonPushedFlag;
+bool effectButtonPushedFlag;
+unsigned long currentMillis = 0;
+unsigned long latestEventMillis = 0;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -61,63 +64,75 @@ void setup() {
   for (int i=0; i < sizeof(EFFECT_BUTTON_PINS)/sizeof(int); i++) {
     pinMode(EFFECT_BUTTON_PINS[i], INPUT);
   }
-  // initialize the LED pin as an output:
-  pinMode(LED_BUILTIN, OUTPUT);
-  mode = ANSWER_ACCEPTING_MODE;
   // OLED初期化
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
     Serial.println(F("SSD1306 disconnection"));
     for(;;); 
   }
-  display.clearDisplay(); //初期化
-  display.display();
+  clearDisplay();
 }
 
 void loop() {
   // 変数初期化
   buttonState = 0;
-  buttonPushedFlag = false;
-  if (mode == ANSWER_ACCEPTING_MODE) {
-    int answererNumber;
-    for (int i=0; i < NUM_OF_ANSWERERS; i++) {
-      buttonState = digitalRead(ANSWERER_BUTTON_PINS[i]);
-      if (buttonState == BUTTON_ON) {
-        buttonPushedFlag = true;
-        answererNumber = i;
+  effectButtonPushedFlag = false;
+  currentMillis = millis();
+  int answererNumber;
+  for (int i=0; i < NUM_OF_ANSWERERS; i++) {
+    buttonState = digitalRead(ANSWERER_BUTTON_PINS[i]);
+    if (buttonState == BUTTON_ON) {
+      answererNumber = i + 1;
+      // 回答者番号がまだキューになければキューに追加
+      if (answererQueue.indexOf(answererNumber) < 0) {
+        answererQueue.push_back(answererNumber);
         break;
       }
-    }
-    if (buttonPushedFlag == true) {
-      display.setTextColor(WHITE);
-      display.setTextSize(OLED_TEXT_SIXE);
-      display.setCursor(50, 0);
-      display.println(answererNumber + 1);
-      display.display();
-      mode = DISPLAY_MODE;
-      buttonPushedFlag = false;
-    }
-    else {
-      digitalWrite(LED_BUILTIN, LOW);
-    }
-  } else if (mode == DISPLAY_MODE) {
-    int pushedButtonNumber;
-    for (int i=0; i < sizeof(EFFECT_BUTTON_PINS)/sizeof(int); i++) {
-      buttonState = digitalRead(EFFECT_BUTTON_PINS[i]);
-      if (buttonState == BUTTON_ON) {
-        buttonPushedFlag = true;
-        pushedButtonNumber = EFFECT_BUTTON_PINS[i];
-        break;
-      }
-    }
-    if (buttonPushedFlag == true) {
-      switch(pushedButtonNumber) {
-        case RESET_BUTTON_PIN:
-          display.clearDisplay();
-          display.display();
-          break;
-      }
-      mode = ANSWER_ACCEPTING_MODE;
-      buttonPushedFlag = false;
     }
   }
+  int effectButtonNumber;
+  for (int i=0; i < sizeof(EFFECT_BUTTON_PINS)/sizeof(int); i++) {
+    buttonState = digitalRead(EFFECT_BUTTON_PINS[i]);
+    if (buttonState == BUTTON_ON) {
+      // 最後のイベントから一定時間が経過していない場合、イベントを行わない
+      if (currentMillis - latestEventMillis >= EVENT_INTERVAL) {
+        latestEventMillis = currentMillis;
+        effectButtonPushedFlag = true;
+        effectButtonNumber = EFFECT_BUTTON_PINS[i];
+        break;
+      }
+    }
+  }
+  if (effectButtonPushedFlag == true) {
+    switch(effectButtonNumber) {
+      case RESET_BUTTON_PIN:
+        answererQueue.clear();
+        break;
+      case CORRECT_BUTTON_PIN:
+        answererQueue.clear();
+        break;
+      case WRONG_BUTTON_PIN:
+        answererQueue.pop_front();
+        break;
+    }
+    effectButtonPushedFlag = false;
+  }
+  if (answererQueue.length() > 0) {
+    displayNumber(answererQueue.front());
+  } else {
+    clearDisplay();
+  }
+}
+
+void displayNumber(int number) {
+  display.clearDisplay(); //初期化
+  display.setTextColor(WHITE);
+  display.setTextSize(OLED_TEXT_SIZE);
+  display.setCursor(50, 0);
+  display.println(number);
+  display.display();
+}
+
+void clearDisplay() {
+  display.clearDisplay(); //初期化
+  display.display();
 }
