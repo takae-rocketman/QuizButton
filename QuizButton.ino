@@ -1,25 +1,13 @@
 /*
   QuizButton
 
-  Turns on and off a light emitting diode(LED) connected to digital pin 13,
-  when pressing a pushbutton attached to pin 2.
-
   The circuit:
   - LED attached from pin 13 to ground through 220 ohm resistor
   - pushbutton attached to pin 2 from +5V
   - 10K resistor attached to pin 2 from ground
 
-  - Note: on most Arduinos there is already an LED on the board
-    attached to pin 13.
-
-  created 2005
-  by DojoDave <http://www.0j0.org>
-  modified 30 Aug 2011
-  by Tom Igoe
-
-  This example code is in the public domain.
-
-  https://www.arduino.cc/en/Tutorial/BuiltInExamples/Button
+  created 2025
+  by Takae Hirayama
 */
 
 
@@ -34,7 +22,7 @@
 // constants won't change. They're used here to set pin numbers:
 const int SCREEN_WIDTH = 128;
 const int SCREEN_HEIGHT = 64;
-const int OLED_RESET = -1;
+const int OLED_RESET = -1;      
 const int OLED_TEXT_SIZE = 9;
 const int NUM_OF_ANSWERERS = 5; // 回答者数
 const int RESET_BUTTON_PIN = 5; // リセットボタンは5番ピン
@@ -50,6 +38,8 @@ QList<int> answererQueue;
 // variables will change:
 int buttonState;  // variable for reading the pushbutton status
 bool effectButtonPushedFlag;
+int answererNumber;
+int effectButtonNumber;
 unsigned long currentMillis = 0;
 unsigned long latestEventMillis = 0;
 
@@ -77,7 +67,18 @@ void loop() {
   buttonState = 0;
   effectButtonPushedFlag = false;
   currentMillis = millis();
-  int answererNumber;
+  answererNumber = -1;
+  detectAnswerButton();
+  effectButtonNumber = -1;
+  detectEffectButton();
+  if (answererQueue.length() > 0) {
+    displayNumber(answererQueue.front());
+  } else {
+    clearDisplay();
+  }
+}
+
+void detectAnswerButton() {
   for (int i=0; i < NUM_OF_ANSWERERS; i++) {
     buttonState = digitalRead(ANSWERER_BUTTON_PINS[i]);
     if (buttonState == BUTTON_ON) {
@@ -89,7 +90,9 @@ void loop() {
       }
     }
   }
-  int effectButtonNumber;
+}
+
+void detectEffectButton() {
   for (int i=0; i < sizeof(EFFECT_BUTTON_PINS)/sizeof(int); i++) {
     buttonState = digitalRead(EFFECT_BUTTON_PINS[i]);
     if (buttonState == BUTTON_ON) {
@@ -115,11 +118,6 @@ void loop() {
         break;
     }
     effectButtonPushedFlag = false;
-  }
-  if (answererQueue.length() > 0) {
-    displayNumber(answererQueue.front());
-  } else {
-    clearDisplay();
   }
 }
 
