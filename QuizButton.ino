@@ -34,6 +34,8 @@ const int EVENT_INTERVAL = 500; // イベントの間隔（ミリ秒）
 int ANSWERER_BUTTON_PINS[NUM_OF_ANSWERERS]; // 回答ボタンのピン番号を格納する配列
 int EFFECT_BUTTON_PINS[3] = {RESET_BUTTON_PIN, CORRECT_BUTTON_PIN, WRONG_BUTTON_PIN};  // 効果ボタンのピン番号を格納する配列
 QList<int> answererQueue;
+QList<int> toneQueue;
+QList<int> durationQueue;
 
 // variables will change:
 int buttonState;  // variable for reading the pushbutton status
@@ -67,10 +69,13 @@ void loop() {
   buttonState = 0;
   effectButtonPushedFlag = false;
   currentMillis = millis();
+  // 回答ボタンの入力を受付
   answererNumber = -1;
   detectAnswerButton();
+  // 効果ボタンの入力を受付
   effectButtonNumber = -1;
   detectEffectButton();
+  // 回答者キューに番号がある場合は番号を表示
   if (answererQueue.length() > 0) {
     displayNumber(answererQueue.front());
   } else {
