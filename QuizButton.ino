@@ -94,6 +94,7 @@ void loop() {
   if (toneFlag) {
     if (currentMillis >= toneFinishMillis) {
       noTone(TONE_PIN);
+      toneFlag = false;
     }
   }
 }
@@ -107,9 +108,7 @@ void detectAnswerButton() {
       if (answererQueue.indexOf(answererNumber) < 0) {
         answererQueue.push_back(answererNumber);
         //　音を鳴らす
-        tone(TONE_PIN, NOTE_ANSWER);
-        toneFlag = true;
-        toneFinishMillis = currentMillis + TONE_DURATION_ANSWER;
+        beginTone(NOTE_ANSWER, TONE_DURATION_ANSWER);
         break;
       }
     }
@@ -137,15 +136,12 @@ void detectEffectButton() {
       case CORRECT_BUTTON_PIN:
         answererQueue.clear();
         //　音を鳴らす
-        tone(TONE_PIN, NOTE_CORRECT);
-        toneFlag = true;
-        toneFinishMillis = currentMillis + TONE_DURATION_CORRECT;
+        beginTone(NOTE_CORRECT, TONE_DURATION_CORRECT);
         break;
       case WRONG_BUTTON_PIN:
         answererQueue.pop_front();
-        tone(TONE_PIN, NOTE_WRONG);
-        toneFlag = true;
-        toneFinishMillis = currentMillis + TONE_DURATION_WRONG;
+        //　音を鳴らす
+        beginTone(NOTE_WRONG, TONE_DURATION_WRONG);
         break;
     }
     effectButtonPushedFlag = false;
@@ -164,4 +160,10 @@ void displayNumber(int number) {
 void clearDisplay() {
   display.clearDisplay(); //初期化
   display.display();
+}
+
+void beginTone(int note, int duration) {
+  tone(TONE_PIN, note);
+  toneFinishMillis = currentMillis + duration;
+  toneFlag = true;
 }
