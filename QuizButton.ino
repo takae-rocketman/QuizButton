@@ -27,10 +27,17 @@ const int OLED_TEXT_SIZE = 9;
 const int NUM_OF_ANSWERERS = 5; // 回答者数
 const int RESET_BUTTON_PIN = 5; // リセットボタンは5番ピン
 const int CORRECT_BUTTON_PIN = RESET_BUTTON_PIN + 1; // 正解ボタンはリセットボタンの隣
-const int WRONG_BUTTON_PIN = CORRECT_BUTTON_PIN + 1; // // 不正解ボタンは正解ボタンの隣
+const int WRONG_BUTTON_PIN = CORRECT_BUTTON_PIN + 1; // 不正解ボタンは正解ボタンの隣
+const int TONE_PIN = 8; // スピーカーは8番ピン
 const int BUTTON_ON = HIGH; // ボタンを押した時に電圧がHIGHになる
 const int BUTTON_OFF = LOW; // ボタンを離した時に電圧がLOWになる
 const int EVENT_INTERVAL = 500; // イベントの間隔（ミリ秒）
+const int NOTE_ANSWER = 1000;
+const int TONE_DURATION_ANSWER = 200;
+const int NOTE_CORRECT = 1400;
+const int TONE_DURATION_CORRECT = 1000;
+const int NOTE_WRONG = 200;
+const int TONE_DURATION_WRONG = 1000;
 int ANSWERER_BUTTON_PINS[NUM_OF_ANSWERERS]; // 回答ボタンのピン番号を格納する配列
 int EFFECT_BUTTON_PINS[3] = {RESET_BUTTON_PIN, CORRECT_BUTTON_PIN, WRONG_BUTTON_PIN};  // 効果ボタンのピン番号を格納する配列
 QList<int> answererQueue;
@@ -40,10 +47,12 @@ QList<int> durationQueue;
 // variables will change:
 int buttonState;  // variable for reading the pushbutton status
 bool effectButtonPushedFlag;
+bool toneFlag;
 int answererNumber;
 int effectButtonNumber;
 unsigned long currentMillis = 0;
 unsigned long latestEventMillis = 0;
+unsigned long toneFinishMillis;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
@@ -81,6 +90,12 @@ void loop() {
   } else {
     clearDisplay();
   }
+
+  if (toneFlag) {
+    if (currentMillis >= toneFinishMillis) {
+      noTone(TONE_PIN);
+    }
+  }
 }
 
 void detectAnswerButton() {
@@ -91,6 +106,10 @@ void detectAnswerButton() {
       // 回答者番号がまだキューになければキューに追加
       if (answererQueue.indexOf(answererNumber) < 0) {
         answererQueue.push_back(answererNumber);
+        //　音を鳴らす
+        tone(TONE_PIN, NOTE_ANSWER);
+        toneFlag = true;
+        toneFinishMillis = currentMillis + TONE_DURATION_ANSWER;
         break;
       }
     }
@@ -117,9 +136,16 @@ void detectEffectButton() {
         break;
       case CORRECT_BUTTON_PIN:
         answererQueue.clear();
+        //　音を鳴らす
+        tone(TONE_PIN, NOTE_CORRECT);
+        toneFlag = true;
+        toneFinishMillis = currentMillis + TONE_DURATION_CORRECT;
         break;
       case WRONG_BUTTON_PIN:
         answererQueue.pop_front();
+        tone(TONE_PIN, NOTE_WRONG);
+        toneFlag = true;
+        toneFinishMillis = currentMillis + TONE_DURATION_WRONG;
         break;
     }
     effectButtonPushedFlag = false;
