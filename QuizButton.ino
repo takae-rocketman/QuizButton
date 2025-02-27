@@ -24,7 +24,7 @@ const int SCREEN_WIDTH = 128;
 const int SCREEN_HEIGHT = 64;
 const int OLED_RESET = -1;      
 const int OLED_TEXT_SIZE = 9;
-const int NUM_OF_ANSWERERS = 5; // 回答者数
+const int NUM_OF_ANSWERERS = 6; // 回答者数
 const int RESET_BUTTON_PIN = 5; // リセットボタンは5番ピン
 const int CORRECT_BUTTON_PIN = RESET_BUTTON_PIN + 1; // 正解ボタンはリセットボタンの隣
 const int WRONG_BUTTON_PIN = CORRECT_BUTTON_PIN + 1; // 不正解ボタンは正解ボタンの隣
@@ -38,11 +38,10 @@ const int NOTE_CORRECT = 1400;
 const int TONE_DURATION_CORRECT = 1000;
 const int NOTE_WRONG = 200;
 const int TONE_DURATION_WRONG = 1000;
-int ANSWERER_BUTTON_PINS[NUM_OF_ANSWERERS]; // 回答ボタンのピン番号を格納する配列
+int ANSWERER_NUMS[NUM_OF_ANSWERERS] = {1, 2, 3, 4, 5, 6}; // 回答者番号を格納する配列
+int ANSWERER_BUTTON_PINS[NUM_OF_ANSWERERS] = {0, 1, 2, 3, 4, 9}; // 回答ボタンのピン番号を格納する配列
 int EFFECT_BUTTON_PINS[3] = {RESET_BUTTON_PIN, CORRECT_BUTTON_PIN, WRONG_BUTTON_PIN};  // 効果ボタンのピン番号を格納する配列
 QList<int> answererQueue;
-QList<int> toneQueue;
-QList<int> durationQueue;
 
 // variables will change:
 int buttonState;  // variable for reading the pushbutton status
@@ -59,8 +58,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 void setup() {
   Serial.begin(9600);
   for (int i=0; i < NUM_OF_ANSWERERS; i++) {
-    ANSWERER_BUTTON_PINS[i] = i;
-    pinMode(i, INPUT);
+    pinMode(ANSWERER_BUTTON_PINS[i], INPUT);
   }
   for (int i=0; i < sizeof(EFFECT_BUTTON_PINS)/sizeof(int); i++) {
     pinMode(EFFECT_BUTTON_PINS[i], INPUT);
@@ -90,7 +88,6 @@ void loop() {
   } else {
     clearDisplay();
   }
-
   if (toneFlag) {
     if (currentMillis >= toneFinishMillis) {
       noTone(TONE_PIN);
@@ -103,7 +100,7 @@ void detectAnswerButton() {
   for (int i=0; i < NUM_OF_ANSWERERS; i++) {
     buttonState = digitalRead(ANSWERER_BUTTON_PINS[i]);
     if (buttonState == BUTTON_ON) {
-      answererNumber = i + 1;
+      answererNumber = ANSWERER_NUMS[i];
       // 回答者番号がまだキューになければキューに追加
       if (answererQueue.indexOf(answererNumber) < 0) {
         answererQueue.push_back(answererNumber);
